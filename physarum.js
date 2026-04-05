@@ -9302,7 +9302,9 @@ export class Physarum extends HTMLElement {
     list.innerHTML = '<div style="font-size:10px;color:#333;padding:8px 0;letter-spacing:0.08em;">Cargando...</div>';
 
     try {
-      const res = await fetch('https://api.github.com/repos/jovenJalejandro9/physarum/contents/simulaciones');
+      const res = await fetch('https://api.github.com/repos/jovenJalejandro9/physarum/contents/simulaciones', {
+        headers: { Authorization: `token ${this._githubToken()}` }
+      });
       if (!res.ok) throw new Error();
       const files = await res.json();
       const sims = files.filter(f => f.name.endsWith('.json'));
