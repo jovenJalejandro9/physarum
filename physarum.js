@@ -8557,6 +8557,9 @@ export class Physarum extends HTMLElement {
   // -- Simulation Control ----------------------------------------------------
 
   _restartSimulation() {
+    // Skip automatic restarts while _applyConfig is running
+    if (this._applyingConfig) return;
+
     // Deactivate scroll bindings before restart (will be re-activated in _doRestart if needed)
     this._deactivateScrollRotation();
     this._deactivateMorphScroll();
@@ -9442,6 +9445,9 @@ export class Physarum extends HTMLElement {
   async _applyConfig(config) {
     if (!config || typeof config !== 'object') return;
 
+    // Suppress automatic restarts triggered by attribute changes during config apply
+    this._applyingConfig = true;
+
     // -- Mode --
     if (config.mode) {
       const radio = this._panelEl.querySelector(`input[name="sim-mode"][value="${config.mode}"]`);
@@ -9564,6 +9570,9 @@ export class Physarum extends HTMLElement {
     // Update mask-related UI visibility
     this._updateMaskControls();
     this._updateEcoSectionVisibility();
+
+    // Re-enable automatic restarts
+    this._applyingConfig = false;
   }
 
   // -- Pointer Events --------------------------------------------------------
