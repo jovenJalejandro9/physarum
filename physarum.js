@@ -3748,7 +3748,7 @@ select option:disabled { color: #444; }
   color: #888;
 }
 .random-btn:hover { background: #111; border-color: #333; }
-.save-btn, .load-btn {
+.guardar-btn, .save-btn, .load-btn {
   flex: 0 0 auto;
   padding: 12px 10px;
   font-family: inherit;
@@ -3762,7 +3762,12 @@ select option:disabled { color: #444; }
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
-.save-btn:hover, .load-btn:hover { color: #bbb; border-color: #333; }
+.guardar-btn:hover, .save-btn:hover, .load-btn:hover { color: #bbb; border-color: #333; }
+.saved-sim-list { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; }
+.saved-sim-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border: 1px solid #1a1a26; border-radius: 4px; }
+.saved-sim-name { font-size: 10px; letter-spacing: 0.08em; color: #555; text-transform: uppercase; }
+.saved-sim-load { font-family: inherit; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; background: transparent; color: #555; border: 1px solid #1a1a26; border-radius: 4px; padding: 4px 8px; cursor: pointer; }
+.saved-sim-load:hover { color: #bbb; border-color: #333; }
 .gear-btn {
   position: absolute;
   top: 12px;
@@ -4309,6 +4314,7 @@ export class Physarum extends HTMLElement {
           <button class="tab" data-tab="render">Render</button>
           <button class="tab" data-tab="morph">Morph</button>
           <button class="tab" data-tab="audio">Audio</button>
+          <button class="tab" data-tab="saved">Simulaciones guardadas</button>
         </div>
 
         <!-- Simulation Tab -->
@@ -4680,13 +4686,33 @@ export class Physarum extends HTMLElement {
           </div>
         </div>
 
+        <!-- Simulaciones guardadas Tab -->
+        <div class="tab-content" data-tab="saved">
+          <div class="section-label">Simulaciones guardadas</div>
+          <div class="saved-sim-list">
+            <div class="saved-sim-item">
+              <span class="saved-sim-name">Simulacion 1</span>
+              <button class="saved-sim-load" type="button">cargar</button>
+            </div>
+            <div class="saved-sim-item">
+              <span class="saved-sim-name">Simulacion 2</span>
+              <button class="saved-sim-load" type="button">cargar</button>
+            </div>
+            <div class="saved-sim-item">
+              <span class="saved-sim-name">Simulacion 3</span>
+              <button class="saved-sim-load" type="button">cargar</button>
+            </div>
+          </div>
+        </div>
+
       </div>
       </div>
       <div class="btn-row">
         <div class="btn-row-inner">
           <button class="start-btn" type="button">start</button>
           <button class="random-btn" type="button">random</button>
-          <button class="save-btn" type="button">save</button>
+          <button class="guardar-btn" type="button">guardar</button>
+          <button class="save-btn" type="button">descargar</button>
           <button class="load-btn" type="button">load</button>
         </div>
       </div>
@@ -4718,6 +4744,7 @@ export class Physarum extends HTMLElement {
 
     this._shadow.append(style, this._canvas, this._panelEl, this._gearBtn, this._fallbackEl, this._fileInput, this._configFileInput);
     this._setupPanelEvents();
+    this._loadSimFromURL();
   }
 
   _setupPanelEvents() {
@@ -4882,6 +4909,12 @@ export class Physarum extends HTMLElement {
       randomBtn.addEventListener('click', () => this._randomizeParams());
     }
 
+    // Guardar button
+    const guardarBtn = this._panelEl.querySelector('.guardar-btn');
+    if (guardarBtn) {
+      guardarBtn.addEventListener('click', () => this._saveSimulation());
+    }
+
     // Save / Load config buttons
     const saveBtn = this._panelEl.querySelector('.save-btn');
     if (saveBtn) {
@@ -4891,6 +4924,9 @@ export class Physarum extends HTMLElement {
     if (loadBtn) {
       loadBtn.addEventListener('click', () => this._configFileInput.click());
     }
+
+    // Populate saved simulations tab
+    this._renderSavedSimulations();
 
     // Render mode selector → live switch
     const renderSelect = this._panelEl.querySelector('.render-mode-select');
@@ -9220,6 +9256,67 @@ export class Physarum extends HTMLElement {
     a.download = `physarum-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  _saveSimulation() {
+    const name = prompt('Nombre de la simulacion:');
+    if (!name || !name.trim()) return;
+    const key = `physarum_saved_${name.trim()}`;
+    const config = this._collectConfig();
+    localStorage.setItem(key, JSON.stringify(config));
+    this._renderSavedSimulations();
+  }
+
+  _renderSavedSimulations() {
+    const list = this._panelEl.querySelector('.saved-sim-list');
+    if (!list) return;
+    const keys = Object.keys(localStorage).filter(k => k.startsWith('physarum_saved_')).sort();
+    if (keys.length === 0) {
+      list.innerHTML = '<div style="font-size:10px;color:#333;padding:8px 0;letter-spacing:0.08em;">No hay simulaciones guardadas.</div>';
+      return;
+    }
+    list.innerHTML = keys.map(key => {
+      const name = key.replace('physarum_saved_', '');
+      return `
+        <div class="saved-sim-item">
+          <span class="saved-sim-name">${name}</span>
+          <div style="display:flex;gap:6px">
+            <button class="saved-sim-load" type="button" data-key="${key}">cargar</button>
+            <button class="saved-sim-delete" type="button" data-key="${key}" style="font-family:inherit;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;background:transparent;color:#333;border:1px solid #1a1a26;border-radius:4px;padding:4px 8px;cursor:pointer;">eliminar</button>
+          </div>
+        </div>`;
+    }).join('');
+
+    list.querySelectorAll('.saved-sim-load').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const name = btn.dataset.key.replace('physarum_saved_', '');
+        const url = `${location.origin}${location.pathname}?sim=${encodeURIComponent(name)}`;
+        window.open(url, '_blank');
+      });
+    });
+
+    list.querySelectorAll('.saved-sim-delete').forEach(btn => {
+      btn.addEventListener('click', () => {
+        localStorage.removeItem(btn.dataset.key);
+        this._renderSavedSimulations();
+      });
+    });
+  }
+
+  async _loadSimFromURL() {
+    const params = new URLSearchParams(location.search);
+    const simName = params.get('sim');
+    if (!simName) return;
+    const key = `physarum_saved_${simName}`;
+    const saved = localStorage.getItem(key);
+    if (!saved) { console.warn('[Physarum] Simulacion no encontrada:', simName); return; }
+    try {
+      const config = JSON.parse(saved);
+      await this._applyConfig(config);
+      this.startSimulation();
+    } catch (e) {
+      console.warn('[Physarum] Error al cargar simulacion desde URL', e);
+    }
   }
 
   /**
