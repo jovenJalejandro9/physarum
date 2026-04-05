@@ -9115,6 +9115,9 @@ export class Physarum extends HTMLElement {
 
     if (paramName === 'sensorDist' || paramName === 'moveSpeed') {
       uniformValue *= this._resolutionScale;
+      if (paramName === 'moveSpeed') {
+        console.log('[DEBUG] _applySliderToUniform moveSpeed - sliderVal:', value, 'resScale:', this._resolutionScale, 'final:', uniformValue);
+      }
     }
 
     // If regeneration is off, don't apply foodRegenRate
@@ -9404,7 +9407,10 @@ export class Physarum extends HTMLElement {
       const res = await fetch(`https://raw.githubusercontent.com/jovenJalejandro9/physarum/main/simulaciones/${filename}`);
       if (!res.ok) { console.warn('[Physarum] Simulacion no encontrada:', simName); return; }
       const config = await res.json();
+      console.log('[DEBUG] Config cargada - moveSpeed:', config?.params?.moveSpeed, 'simSpeed:', config?.params?.simSpeed, 'mode:', config?.mode);
       await this._applyConfig(config);
+      const msSlider = this._panelEl.querySelector('[data-param="moveSpeed"]');
+      console.log('[DEBUG] Slider moveSpeed tras _applyConfig:', msSlider?.value);
       // Reset morph targets so hardcoded HTML attributes don't override the loaded config
       this._morphTargets = null;
       if (config.morphTargets && config.morphTargets.length >= 2) {
@@ -9418,6 +9424,7 @@ export class Physarum extends HTMLElement {
         this._height = Math.floor(rect.height);
       }
       this.startSimulation();
+      console.log('[DEBUG] startSimulation() llamado. _width:', this._width, '_height:', this._height);
     } catch (e) {
       console.warn('[Physarum] Error al cargar simulacion desde URL', e);
     }
