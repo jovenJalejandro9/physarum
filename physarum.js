@@ -311,8 +311,8 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   angle += turnAmount;
 
   // Move with world wrap
-  var nx = x + cos(angle) * speed;
-  var ny = y + sin(angle) * speed;
+  var nx = x + cos(angle) * speed * params.moveSpeed;
+  var ny = y + sin(angle) * speed * params.moveSpeed;
   if (nx < 0.0) { nx += fW; }
   if (nx >= fW) { nx -= fW; }
   if (ny < 0.0) { ny += fH; }
@@ -1854,8 +1854,8 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
 
   angle += turnAmount;
 
-  var nx = x + cos(angle) * speed * speedMod;
-  var ny = y + sin(angle) * speed * speedMod;
+  var nx = x + cos(angle) * speed * speedMod * params.moveSpeed;
+  var ny = y + sin(angle) * speed * speedMod * params.moveSpeed;
   if (nx < 0.0) { nx += fW; }
   if (nx >= fW) { nx -= fW; }
   if (ny < 0.0) { ny += fH; }
@@ -2291,8 +2291,8 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
 
   // ---- Movement (shared) ----
 
-  var nx = x + cos(angle) * speed * speedMod;
-  var ny = y + sin(angle) * speed * speedMod;
+  var nx = x + cos(angle) * speed * speedMod * params.moveSpeed;
+  var ny = y + sin(angle) * speed * speedMod * params.moveSpeed;
   if (nx < 0.0) { nx += fW; }
   if (nx >= fW) { nx -= fW; }
   if (ny < 0.0) { ny += fH; }
@@ -8278,7 +8278,7 @@ export class Physarum extends HTMLElement {
       }
 
       data[off + 2] = Math.random() * Math.PI * 2; // angle
-      data[off + 3] = DEFAULTS.moveSpeed * (0.8 + Math.random() * 0.4); // speed
+      data[off + 3] = (0.8 + Math.random() * 0.4); // speed (base; scaled by params.moveSpeed in shader)
       data[off + 4] = DEFAULTS.sensorAngle * (0.8 + Math.random() * 0.4); // sensorAngle
       data[off + 5] = DEFAULTS.sensorDist * (0.8 + Math.random() * 0.4); // sensorDist
       data[off + 6] = DEFAULTS.turnSpeed * (0.8 + Math.random() * 0.4); // turnSpeed
@@ -8367,7 +8367,7 @@ export class Physarum extends HTMLElement {
         data[off + 0] = (px % w) + Math.random();                     // x
         data[off + 1] = Math.floor(px / w) + Math.random();           // y
         data[off + 2] = Math.random() * TWO_PI;                       // angle
-        data[off + 3] = d.moveSpeed * (0.8 + Math.random() * 0.4);   // speed
+        data[off + 3] = (0.8 + Math.random() * 0.4);                 // speed (base; scaled by params.moveSpeed in shader)
         data[off + 4] = baseSA * (0.8 + Math.random() * 0.4);        // sensorAngle
         data[off + 5] = baseSD * (0.8 + Math.random() * 0.4);        // sensorDist
         data[off + 6] = d.turnSpeed * (0.8 + Math.random() * 0.4);   // turnSpeed
@@ -8476,7 +8476,7 @@ export class Physarum extends HTMLElement {
         data[off + 0] = (px % w) + Math.random();                     // x
         data[off + 1] = Math.floor(px / w) + Math.random();           // y
         data[off + 2] = Math.random() * TWO_PI;                       // angle
-        data[off + 3] = d.moveSpeed * (0.8 + Math.random() * 0.4);   // speed
+        data[off + 3] = (0.8 + Math.random() * 0.4);                 // speed (base; scaled by params.moveSpeed in shader)
         data[off + 4] = baseSA * (0.8 + Math.random() * 0.4);        // sensorAngle
         data[off + 5] = baseSD * (0.8 + Math.random() * 0.4);        // sensorDist
         data[off + 6] = d.turnSpeed * (0.8 + Math.random() * 0.4);   // turnSpeed
