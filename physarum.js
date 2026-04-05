@@ -4123,6 +4123,9 @@ export class Physarum extends HTMLElement {
     this._initPromise = null;
     this._restartToken = null;
 
+    // Block auto-start if loading from URL
+    this._urlSimPending = !!new URLSearchParams(location.search).get('sim');
+
     // Simulation state
     this._raf = null;
     this._frameCount = 0;
@@ -5606,6 +5609,7 @@ export class Physarum extends HTMLElement {
   }
 
   _onResize() {
+    if (this._urlSimPending) return;
     this._userOverrodeAgentCount = false;
 
     const dpr = Math.min(devicePixelRatio, 2);
@@ -9402,6 +9406,13 @@ export class Physarum extends HTMLElement {
       this._morphTargets = null;
       if (config.morphTargets && config.morphTargets.length >= 2) {
         this._applyMorphTargets();
+      }
+      this._urlSimPending = false;
+      // Now that canvas is sized, trigger resize before starting
+      const rect = this.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        this._width = Math.floor(rect.width);
+        this._height = Math.floor(rect.height);
       }
       this.startSimulation();
     } catch (e) {
