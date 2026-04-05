@@ -9290,10 +9290,47 @@ export class Physarum extends HTMLElement {
     });
 
     if (res.ok) {
-      await this._renderSavedSimulations();
+      const data = await res.json();
+      const sha = data.content?.sha || '';
+      this._addSavedSimItem(name.trim(), sha);
     } else {
       alert('Error al guardar. Comprueba tu token de GitHub.');
     }
+  }
+
+  _addSavedSimItem(name, sha) {
+    const list = this._panelEl.querySelector('.saved-sim-list');
+    if (!list) return;
+    // Remove "no hay simulaciones" message if present
+    const empty = list.querySelector('div');
+    if (empty && !empty.classList.contains('saved-sim-item')) empty.remove();
+
+    const item = document.createElement('div');
+    item.className = 'saved-sim-item';
+    item.innerHTML = `
+      <span class="saved-sim-name">${name}</span>
+      <div style="display:flex;gap:6px">
+        <button class="saved-sim-load" type="button" data-name="${name}">cargar</button>
+        <button class="saved-sim-delete" type="button" data-name="${name}" data-sha="${sha}" style="font-family:inherit;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;background:transparent;color:#333;border:1px solid #1a1a26;border-radius:4px;padding:4px 8px;cursor:pointer;">eliminar</button>
+      </div>`;
+
+    item.querySelector('.saved-sim-load').addEventListener('click', () => {
+      const url = `${location.origin}${location.pathname}?sim=${encodeURIComponent(name)}`;
+      window.open(url, '_blank');
+    });
+
+    item.querySelector('.saved-sim-delete').addEventListener('click', async () => {
+      const token = this._githubToken();
+      const filename = name + '.json';
+      const res = await fetch(`https://api.github.com/repos/jovenJalejandro9/physarum/contents/simulaciones/${filename}`, {
+        method: 'DELETE',
+        headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: `Eliminar simulacion: ${name}`, sha, branch: 'main' }),
+      });
+      if (res.ok) item.remove();
+    });
+
+    list.appendChild(item);
   }
 
   async _renderSavedSimulations() {
