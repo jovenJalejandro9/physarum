@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Physarum</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; background: #050508; }
+
+.morph-section { position: relative; }
+.morph-section physarum-sim {
+  display: block;
+  width: 100%;
+  height: 100vh;
+}
+
+.section-labels {
+  position: fixed; top: 0; left: 0; right: 0;
+  pointer-events: none; z-index: 5;
+}
+.section-label {
+  position: absolute; bottom: 28px; left: 28px;
+  font-size: 10px; letter-spacing: 0.25em; text-transform: uppercase;
+  color: #3a3a48; opacity: 0; transition: opacity 0.6s;
+  font-family: 'Courier New', monospace;
+}
+.section-label.visible { opacity: 1; }
+</style>
+</head>
+<body>
+
+<section class="morph-section" id="morph-section">
+  <physarum-sim
+    id="morph-demo"
+    mode="simple"
+    targets='[
+      {"mask":"text","text":"PHYSARUM"},
+      {"mask":"3d","shape":"torus","axes":"xy"},
+      {"mask":"text","text":"MORPH","regeneration":false},
+      {"mask":"libre"}
+    ]'
+    rendermode="trail"
+  ></physarum-sim>
+</section>
+
+<div class="section-labels" id="section-labels">
+  <div class="section-label" data-index="0">text mask &mdash; "PHYSARUM"</div>
+  <div class="section-label" data-index="1">3d mask &mdash; torus</div>
+  <div class="section-label" data-index="2">devour mode &mdash; "MORPH"</div>
+  <div class="section-label" data-index="3">libre &mdash; free roam</div>
+</div>
+
+<script type="module">
+import './physarum.js';
+
+const morphSection = document.getElementById('morph-section');
+const labels = document.querySelectorAll('.section-label');
+const TARGETS = 4;
+
+function updateLabels() {
+  const rect = morphSection.getBoundingClientRect();
+  const sectionH = morphSection.offsetHeight;
+  const viewH = window.innerHeight;
+
+  const scrolled = -rect.top;
+  const totalScroll = sectionH - viewH;
+  if (totalScroll <= 0) return;
+
+  const progress = Math.max(0, Math.min(1, scrolled / totalScroll));
+  const segment = progress * (TARGETS - 1);
+  const activeIndex = Math.round(segment);
+
+  labels.forEach((lbl, i) => {
+    lbl.classList.toggle('visible', i === activeIndex && rect.top <= 0 && rect.bottom >= viewH);
+  });
+}
+
+let ticking = false;
+window.addEventListener('scroll', () => {
+  if (!ticking) {
+    ticking = true;
+    requestAnimationFrame(() => {
+      updateLabels();
+      ticking = false;
+    });
+  }
+}, { passive: true });
+</script>
+</body>
+</html>
