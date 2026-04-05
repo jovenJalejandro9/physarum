@@ -9258,61 +9258,117 @@ export class Physarum extends HTMLElement {
     URL.revokeObjectURL(url);
   }
 
-  _saveSimulation() {
-    const name = prompt('Nombre de la simulacion:');
-    if (!name || !name.trim()) return;
-    const key = `physarum_saved_${name.trim()}`;
-    const config = this._collectConfig();
-    localStorage.setItem(key, JSON.stringify(config));
-    this._renderSavedSimulations();
+  _githubToken() {
+    let token = localStorage.getItem('physarum_gh_token');
+    if (!token) {
+      token = prompt('Introduce tu token de GitHub para guardar simulaciones:');
+      if (token) localStorage.setItem('physarum_gh_token', token.trim());
+    }
+    return token || null;
   }
 
-  _renderSavedSimulations() {
+  async _saveSimulation() {
+    const name = prompt('Nombre de la simulacion:');
+    if (!name || !name.trim()) return;
+    const token = this._githubToken();
+    if (!token) return;
+
+    const filename = name.trim().replace(/[^a-zA-Z0-9_-]/g, '_') + '.json';
+    const config = this._collectConfig();
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(config, null, 2))));
+    const apiUrl = `https://api.github.com/repos/jovenJalejandro9/physarum/contents/simulaciones/${filename}`;
+
+    // Check if file exists to get SHA (required for updates)
+    let sha;
+    try {
+      const check = await fetch(apiUrl, { headers: { Authorization: `token ${token}` } });
+      if (check.ok) { const d = await check.json(); sha = d.sha; }
+    } catch {}
+
+    const body = { message: `Guardar simulacion: ${name.trim()}`, content, branch: 'main' };
+    if (sha) body.sha = sha;
+
+    const res = await fetch(apiUrl, {
+      method: 'PUT',
+      headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    if (res.ok) {
+      await this._renderSavedSimulations();
+    } else {
+      alert('Error al guardar. Comprueba tu token de GitHub.');
+    }
+  }
+
+  async _renderSavedSimulations() {
     const list = this._panelEl.querySelector('.saved-sim-list');
     if (!list) return;
-    const keys = Object.keys(localStorage).filter(k => k.startsWith('physarum_saved_')).sort();
-    if (keys.length === 0) {
+    list.innerHTML = '<div style="font-size:10px;color:#333;padding:8px 0;letter-spacing:0.08em;">Cargando...</div>';
+
+    try {
+      const res = await fetch('https://api.github.com/repos/jovenJalejandro9/physarum/contents/simulaciones');
+      if (!res.ok) throw new Error();
+      const files = await res.json();
+      const sims = files.filter(f => f.name.endsWith('.json'));
+
+      if (sims.length === 0) {
+        list.innerHTML = '<div style="font-size:10px;color:#333;padding:8px 0;letter-spacing:0.08em;">No hay simulaciones guardadas.</div>';
+        return;
+      }
+
+      list.innerHTML = sims.map(f => {
+        const name = f.name.replace('.json', '');
+        return `
+          <div class="saved-sim-item">
+            <span class="saved-sim-name">${name}</span>
+            <div style="display:flex;gap:6px">
+              <button class="saved-sim-load" type="button" data-name="${name}">cargar</button>
+              <button class="saved-sim-delete" type="button" data-name="${name}" data-sha="${f.sha}" style="font-family:inherit;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;background:transparent;color:#333;border:1px solid #1a1a26;border-radius:4px;padding:4px 8px;cursor:pointer;">eliminar</button>
+            </div>
+          </div>`;
+      }).join('');
+
+      list.querySelectorAll('.saved-sim-load').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const url = `${location.origin}${location.pathname}?sim=${encodeURIComponent(btn.dataset.name)}`;
+          window.open(url, '_blank');
+        });
+      });
+
+      list.querySelectorAll('.saved-sim-delete').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const token = this._githubToken();
+          if (!token) return;
+          const filename = btn.dataset.name + '.json';
+          await fetch(`https://api.github.com/repos/jovenJalejandro9/physarum/contents/simulaciones/${filename}`, {
+            method: 'DELETE',
+            headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: `Eliminar simulacion: ${btn.dataset.name}`, sha: btn.dataset.sha, branch: 'main' }),
+          });
+          await this._renderSavedSimulations();
+        });
+      });
+    } catch {
       list.innerHTML = '<div style="font-size:10px;color:#333;padding:8px 0;letter-spacing:0.08em;">No hay simulaciones guardadas.</div>';
-      return;
     }
-    list.innerHTML = keys.map(key => {
-      const name = key.replace('physarum_saved_', '');
-      return `
-        <div class="saved-sim-item">
-          <span class="saved-sim-name">${name}</span>
-          <div style="display:flex;gap:6px">
-            <button class="saved-sim-load" type="button" data-key="${key}">cargar</button>
-            <button class="saved-sim-delete" type="button" data-key="${key}" style="font-family:inherit;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;background:transparent;color:#333;border:1px solid #1a1a26;border-radius:4px;padding:4px 8px;cursor:pointer;">eliminar</button>
-          </div>
-        </div>`;
-    }).join('');
-
-    list.querySelectorAll('.saved-sim-load').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const name = btn.dataset.key.replace('physarum_saved_', '');
-        const url = `${location.origin}${location.pathname}?sim=${encodeURIComponent(name)}`;
-        window.open(url, '_blank');
-      });
-    });
-
-    list.querySelectorAll('.saved-sim-delete').forEach(btn => {
-      btn.addEventListener('click', () => {
-        localStorage.removeItem(btn.dataset.key);
-        this._renderSavedSimulations();
-      });
-    });
   }
 
   async _loadSimFromURL() {
     const params = new URLSearchParams(location.search);
     const simName = params.get('sim');
     if (!simName) return;
-    const key = `physarum_saved_${simName}`;
-    const saved = localStorage.getItem(key);
-    if (!saved) { console.warn('[Physarum] Simulacion no encontrada:', simName); return; }
     try {
-      const config = JSON.parse(saved);
+      const filename = simName.replace(/[^a-zA-Z0-9_-]/g, '_') + '.json';
+      const res = await fetch(`https://raw.githubusercontent.com/jovenJalejandro9/physarum/main/simulaciones/${filename}`);
+      if (!res.ok) { console.warn('[Physarum] Simulacion no encontrada:', simName); return; }
+      const config = await res.json();
       await this._applyConfig(config);
+      // Reset morph targets so hardcoded HTML attributes don't override the loaded config
+      this._morphTargets = null;
+      if (config.morphTargets && config.morphTargets.length >= 2) {
+        this._applyMorphTargets();
+      }
       this.startSimulation();
     } catch (e) {
       console.warn('[Physarum] Error al cargar simulacion desde URL', e);
