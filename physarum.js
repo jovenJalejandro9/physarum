@@ -4298,6 +4298,7 @@ export class Physarum extends HTMLElement {
     this._gearBtn = document.createElement('button');
     this._gearBtn.className = 'gear-btn';
     this._gearBtn.innerHTML = '&#9881;';
+    this._gearBtn.style.display = this._urlSimPending ? 'none' : 'block';
     this._gearBtn.addEventListener('click', () => this._togglePanel());
 
     this._fallbackEl = document.createElement('div');
@@ -4305,7 +4306,7 @@ export class Physarum extends HTMLElement {
     this._fallbackEl.textContent = 'WebGPU is not supported in this browser.';
 
     this._panelEl = document.createElement('div');
-    this._panelEl.className = 'config-panel';
+    this._panelEl.className = this._urlSimPending ? 'config-panel hidden' : 'config-panel';
     this._panelEl.innerHTML = `
       <div class="config-scroll">
       <div class="config-inner">
@@ -4747,12 +4748,6 @@ export class Physarum extends HTMLElement {
 
     this._shadow.append(style, this._canvas, this._panelEl, this._gearBtn, this._fallbackEl, this._fileInput, this._configFileInput);
     this._setupPanelEvents();
-
-    // If loading from URL, hide panel and gear button immediately for clean start
-    if (this._urlSimPending) {
-      this._panelEl.classList.add('hidden');
-      this._gearBtn.style.display = 'none';
-    }
 
     this._loadSimFromURL();
   }
