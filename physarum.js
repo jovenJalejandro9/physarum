@@ -8594,8 +8594,8 @@ export class Physarum extends HTMLElement {
 
     this._createBuffers();
 
-    // Apply panel params if agent count was specified (from START button)
-    if (agentCount != null) {
+    // Always apply panel params so user settings are preserved across all restart types
+    {
       const params = this.readPanelParams();
       for (const [paramName, value] of Object.entries(params)) {
         this._applySliderToUniform(paramName, value);
